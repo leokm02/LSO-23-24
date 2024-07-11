@@ -52,6 +52,7 @@ The project includes a launchMultipleClient.sh script that launches multiple cli
 
 ### Troubleshooting
 •    **Missing Separator Error**: Ensure that all commands in the Makefile are prefixed with a tab character and not spaces.
+
 •    **Permission Denied**: If you encounter a permission error when running compile.sh, you might need to make the script executable. Run:
 ```sh
     chmod +x compile.sh
