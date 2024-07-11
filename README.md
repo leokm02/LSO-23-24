@@ -24,11 +24,11 @@ Before you begin, make sure you have the following installed on your system:
       ```
 2.    **Execute the Compile Script**
 
-    The project includes a compile.sh script that handles the entire compilation process. To compile the project, simply run:
+   The project includes a compile.sh script that handles the entire compilation process. To compile the project, simply run:
     
-    ```sh
-    ./compile.sh
-      ```
+   ```sh
+      ./compile.sh
+   ```
       
 ### Run Instructions
 
