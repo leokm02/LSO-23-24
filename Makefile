@@ -32,3 +32,8 @@ $(CLIENT): $(CLIENT_OBJ)
 clean:
 	rm -f $(SERVER_OBJ) $(CLIENT_OBJ)
 
+# Rule to remove executables
+delete:
+	rm -f client server
+
+all: clean server.o client.o $(SERVER) $(CLIENT)
