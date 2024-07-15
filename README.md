@@ -26,7 +26,7 @@ Before you begin, make sure you have the following installed on your system:
 
 The project includes a Makefile that handles the entire compilation process. To compile the project, simply run:
 ```sh
-    make all
+    make
 ```
 
       
@@ -47,8 +47,10 @@ To run a client run the following command from your terminal:
 The project includes a launchMultipleClient.sh script that launches multiple client at once. To do so, simply run:
 
 ```sh
-    ./launchMultipleClient.sh
+    ./launchMultipleClient.sh CLIENTS_TO_LAUNCH
 ```
+
+where CLIENTS_TO_LAUNCH is a number (e.g 10)
 
 ### Troubleshooting
 

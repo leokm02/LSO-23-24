@@ -1,13 +1,10 @@
+
 #! /bin/bash
 
-#Script that launches 3 instances of client, 1 per second.
-
-./client & 
-sleep 1 
-./client & 
-sleep 1 
-./client & 
-sleep 1
+#Script that launches n instances of client.
+for ((i=0; i<$1; i++)); do
+	./client &
+done
 
 wait
 echo "Script executed."

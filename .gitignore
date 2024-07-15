@@ -53,3 +53,7 @@ dkms.conf
 
 # MacOS index file
 .DS_Store
+
+# Various Files
+.idea/
+.vscode/
