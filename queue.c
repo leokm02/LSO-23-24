@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 // Function to create a queue
-Queue* create_queue() {
+Queue* create_queue(void) {
     Queue* queue = (Queue*)malloc(sizeof(Queue));
     if (!queue) {
         perror("Failed to create queue");

@@ -11,13 +11,43 @@
 #include "queue.h"
 #include "constants.h"
 #include "cashier.h"
+#include "client.h"
 
 volatile sig_atomic_t keepRunning = 1;
 pthread_mutex_t shop = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 Cashier cashiers[MAX_CASHIERS]; // Array of cashiers
+char timeLog[BUFFER_SIZE];
 Queue* waiting_to_enter;
 Queue* clients;
+Queue* waiting_to_exit;
+
+
+#if MAX_CASHIERS <= 0 || ACTIVE_CASHIERS <= 0 || MAX_CLIENTS <= 0 || CLIENTS_BATCH_SIZE <= 0
+#error "Error, one or more value provided are 0 or negative"
+#endif
+
+#if MAX_CASHIERS < ACTIVE_CASHIERS
+#error "Error, MAX_CASHIERS should be greater or equal than ACTIVE_CASHIERS"
+#endif
+
+#if MAX_CLIENTS <= CLIENTS_BATCH_SIZE
+#error "Error, MAX_CLIENTS should be greater than CLIENTS_BATCH_SIZE
+#endif
+
+void writeCurrentTimeToBuffer(char *timeBuffer) {
+    time_t rawtime;
+    struct tm *timeinfo;
+    
+    // Get the current time
+    time(&rawtime);
+    
+    // Convert the current time to local time representation
+    timeinfo = localtime(&rawtime);
+    
+    // Format the time and write it to the provided buffer
+    strftime(timeBuffer, BUFFER_SIZE, "%Y-%m-%d %H:%M:%S", timeinfo);
+}
 
 //Signal handling
 void signal_handler(int signal) {
@@ -25,7 +55,7 @@ void signal_handler(int signal) {
     printf("\nSignal %d received. Shutting down...\n", signal);
     // Destroy the mutexes for each cashier
     for (int i = 0; i < ACTIVE_CASHIERS; i++) {
-        pthread_mutex_destroy(&cashiers[i].queueMutex);
+        // pthread_mutex_destroy(&cashiers[i].queueMutex);
         destroy_queue(cashiers[i].queue);
     }
     destroy_queue(clients);
@@ -34,7 +64,7 @@ void signal_handler(int signal) {
 }
 
 //Function to get cashier with shortest queue
-int get_shortest_queue() {
+int get_shortest_queue(void) {
     int cashier = 0;
     int queueSize = 0;
     int tmp = 0;
@@ -59,12 +89,10 @@ void* handleClient(void* arg) {
         printf("%s%s%s Market is full, waiting for clients to leave...\n",YELLOW_COLOR, "[WARN]", RESET_COLOR);
         // Clients should wait to enter if capacity is reached
         enqueue(waiting_to_enter, arg);
+        printf("%s%s%s Clients in the market %d, Clients waiting to enter %d\n",GREEN_COLOR, "[INFO]", RESET_COLOR, get_size(clients), get_size(waiting_to_enter));
         do {
-            pthread_cond_wait(&cond, &shop);
-            if(get_size(waiting_to_enter)+get_size(clients) < MAX_CLIENTS) {
-                break;
-            }
-        } while(get_size(clients) >= MAX_CLIENTS-CLIENTS_BATCH_SIZE);
+            pthread_cond_wait(&cond, &shop); // wait until another client leaves
+        } while(get_size(waiting_to_enter)+get_size(clients) > MAX_CLIENTS); 
         dequeue(waiting_to_enter);
         printf("%s%s%s Now %d can enter\n",GREEN_COLOR, "[INFO]", RESET_COLOR, clientSocket);
     }
@@ -72,51 +100,95 @@ void* handleClient(void* arg) {
     enqueue(clients, arg);
     pthread_mutex_unlock(&shop);
 
-    char message[100] = "Payment received, Bye bye!";
-
     int cashierIndex, products, customerId;
     // Receive number of products and customerID from client
     recv(clientSocket, &products, sizeof(products), 0);
     recv(clientSocket, &customerId, sizeof(customerId), 0);
 
-    cashierIndex = get_shortest_queue(); // Get cashier with shortest queue
-
-    Cashier* cashier = &cashiers[cashierIndex]; // Get the corresponding cashier
-    pthread_mutex_lock(&cashier->queueMutex); // Lock the cashier's queue
-
-    // Calculate service time based on base service time and number of products
-    int serviceTime = cashier->baseServiceTime + products;
-    printf("%s%s%s Serving customer %d with %d products at cashier %d for %d seconds.\n", GREEN_COLOR, "[INFO]", RESET_COLOR, customerId, products, cashierIndex, serviceTime);
-    enqueue(cashier->queue, arg); // Enqueue client
-    sleep(serviceTime); // Simulate service time
-    dequeue(cashier->queue); //Dequeue client
-    pthread_mutex_unlock(&cashier->queueMutex); // Unlock the cashier's queue
-    printf("%s%s%s Done serving customer %d.\n",GREEN_COLOR, "[INFO]", RESET_COLOR, customerId);
-    send(clientSocket, &message, sizeof(message), 0);
-    close(clientSocket); // Close the client socket
-    dequeue(clients);
-    pthread_cond_broadcast(&cond); // Notify all waiting threads to wake up
-    printf("%s%s%s There are %d customers shopping\n",GREEN_COLOR, "[INFO]", RESET_COLOR, get_size(clients));
-    if(get_size(waiting_to_enter) > 0) {
-        printf("%s%s%s There are %d customers waiting to enter\n",GREEN_COLOR, "[INFO]", RESET_COLOR, get_size(waiting_to_enter));
+    Client* client = malloc(sizeof(Client));
+    client->clientSocket = clientSocket;
+    client->products = products;
+    if(products > 0) { //If client bought something enqueue it to a cashier
+        cashierIndex = get_shortest_queue(); // Get cashier with shortest queue
+        Cashier* cashier = &cashiers[cashierIndex]; // Get the corresponding cashier
+        enqueue(cashier->queue, client); // Enqueue client to the cashier
+    } else {
+        enqueue(waiting_to_exit, client); // Enqueue client to the supervisor queue
     }
     free(arg);
     return NULL;
 }
 
-int main() {
+void* cashier_logic(void* arg) {
+    const char message[100] = "Payment received, You can leave!";
+    char timeBuffer[BUFFER_SIZE] = {0};
+    Cashier* cashier = (Cashier*) arg;
+    printf("%s%s%s Created thread for cashier %d\n", GREEN_COLOR, "[INFO]", RESET_COLOR, cashier->id);
+    // int client = *((int*)arg);
+    while(1) {
+        if(!is_empty(cashier->queue)) {
+            writeCurrentTimeToBuffer(timeBuffer);
+            Client* client = ((Client*)dequeue(cashier->queue));
+            int serviceTime = cashier->baseServiceTime + client->products;
+            printf("%s%s %s %s%d%s%s Serving customer %d with %d products, it will take %d seconds.\n", GREEN_COLOR, timeBuffer, "[INFO]", "[CASH-", cashier->id+1, "]", RESET_COLOR, client->clientSocket, client->products, serviceTime);
+            sleep(serviceTime); // Simulate service time
+            writeCurrentTimeToBuffer(timeBuffer);
+            printf("%s%s %s %s%d%s%s Done serving customer %d.\n",GREEN_COLOR, timeBuffer, "[INFO]", "[CASH-", cashier->id+1, "]", RESET_COLOR, client->clientSocket);
+            send(client->clientSocket, &message, sizeof(message), 0);
+            close(client->clientSocket); // Close the client socket
+            dequeue(clients); //Client exits the market
+            pthread_cond_broadcast(&cond); // Notify all waiting clients threads to wake up
+        }
+        usleep(500000);
+        memset(timeBuffer, 0, BUFFER_SIZE);
+    }
+    return NULL;
+}
+
+void* supervisor_logic(void* arg) {
+    const char message[BUFFER_SIZE] = "Permission granted, You can leave!";
+    char timeBuffer[BUFFER_SIZE] = {0};
+    printf("%s%s%s Created thread for supervisor\n", GREEN_COLOR, "[INFO]", RESET_COLOR);
+    while(1) {
+        if(!is_empty(waiting_to_exit)) {
+            Client* client = ((Client*)dequeue(waiting_to_exit));
+            int randomTime = rand() % 6 + 1;
+            writeCurrentTimeToBuffer(timeBuffer);
+            printf("%s%s %s %s%s Checking if customer %d stole something...\n", GREEN_COLOR, timeBuffer, "[INFO]", "[SUPERV]", RESET_COLOR, client->clientSocket);
+            sleep(randomTime);
+            writeCurrentTimeToBuffer(timeBuffer);
+            printf("%s%s %s %s%s All good %d can go\n", GREEN_COLOR, timeBuffer, "[INFO]", "[SUPERV]", RESET_COLOR, client->clientSocket);
+            send(client->clientSocket, &message, sizeof(message), 0);
+            close(client->clientSocket); // Close the client socket
+            dequeue(clients); //Client exits the market
+            pthread_cond_broadcast(&cond); // Notify all waiting clients threads to wake up
+        }
+        usleep(500000);
+        memset(timeBuffer, 0, BUFFER_SIZE);
+    }
+    return NULL;
+}
+
+int main(void) {
     system("clear");
     printf("%s", LOGO);
     clients = create_queue();
     waiting_to_enter = create_queue();
+    waiting_to_exit = create_queue();
     signal(SIGINT, signal_handler);
     srand(time(NULL)+getpid()); // Seed the random number generator    
     for (int i = 0; i < ACTIVE_CASHIERS; i++) {
         // Initialize each cashier with a random base service time and a mutex
         cashiers[i] = (Cashier){ .id = i, .baseServiceTime = rand() % 3 + 1 };
-        pthread_mutex_init(&cashiers[i].queueMutex, NULL);
+        // pthread_mutex_init(&cashiers[i].queueMutex, NULL);
         cashiers[i].queue = create_queue();
-    }
+        pthread_t cashier_thread;
+        pthread_create(&cashier_thread, NULL, cashier_logic, &cashiers[i]);
+        pthread_detach(cashier_thread);
+   }
+
+   pthread_t supervisor_thread;
+   pthread_create(&supervisor_thread, NULL, supervisor_logic, NULL);
 
     int serverSocket, newSocket;
     struct sockaddr_in address;
@@ -145,40 +217,18 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    // Set server socket to non-blocking mode
-    // int flags = fcntl(serverSocket, F_GETFL, 0);
-    // fcntl(serverSocket, F_SETFL, flags | O_NONBLOCK);
-
     printf("%s%s%s Server is running and waiting for connections on port %d...\n", GREEN_COLOR, "[INFO]", RESET_COLOR, PORT);
 
     // Main loop to accept and handle client connections
     while (keepRunning) {
-        newSocket = accept(serverSocket, (struct sockaddr *)&address, (socklen_t*)&addrlen);
-        if (newSocket < 0) {
-            if (errno == EWOULDBLOCK || errno == EAGAIN) {
-                // No pending connections; sleep for a short time and try again
-                usleep(100000); // Sleep for 100ms
-                if(keepRunning) {
-                    continue;
-                } else {
-                    break;
-                }
-            } else {
-                perror("accept failed");
-                exit(EXIT_FAILURE);
-            }
-        }
-        
-        
+        newSocket = accept(serverSocket, (struct sockaddr *)&address, (socklen_t*)&addrlen);       
         printf("%s%s%s New client connected: %d\n",GREEN_COLOR, "[INFO]", RESET_COLOR, newSocket);
-        printf("%s%s%s Clients in the market %d, Clients waiting to enter %d\n",GREEN_COLOR, "[INFO]", RESET_COLOR, get_size(clients), get_size(waiting_to_enter));
         // Create a new thread to handle the client
         pthread_t thread;
         int* pclient = malloc(sizeof(int));
         *pclient = newSocket;
         pthread_create(&thread, NULL, handleClient, pclient);
-        pthread_detach(thread); // Detach the thread to allow it to clean up after itself
+        pthread_detach(thread);
     }
-
     return 0;
 }

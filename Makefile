@@ -2,7 +2,7 @@
 CC = gcc
 
 # Define flags for compilation (including pthread library)
-CFLAGS = -pthread -g
+CFLAGS = -pthread -g -Wall -pedantic
 ASAN_CFLAGS = -pthread -fsanitize=address -g
 
 # Define object files

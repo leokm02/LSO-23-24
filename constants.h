@@ -9,6 +9,7 @@
 #define BUFFER_SIZE 1024
 #define GREEN_COLOR "\033[0;32m"
 #define YELLOW_COLOR "\033[0;33m"
+#define MAGENTA_COLOR "\033[0;35m"
 #define RESET_COLOR "\033[0m"
 #define WELCOME_MESSAGE "Welcome"
 #define LOGO "\

@@ -19,7 +19,7 @@ typedef struct Queue {
 } Queue;
 
 // Function to create a queue
-Queue* create_queue();
+Queue* create_queue(void);
 
 // Function to enqueue data
 void enqueue(Queue* queue, void* data);

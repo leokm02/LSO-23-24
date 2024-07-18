@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <time.h>
 #include "constants.h"
+#include "client.h"
 
 char buffer[BUFFER_SIZE];
 
@@ -56,20 +57,23 @@ void simulateShopping(int customerId, int shoppingTime, int cashierIndex, int pr
     send(sock, &products, sizeof(products), 0);
     send(sock, &customerId, sizeof(customerId), 0);
 
-    char message[100];
+    char message[BUFFER_SIZE] = {0};
 
-    recv(sock, &message, sizeof(message), 0);
+    recv(sock, &message, BUFFER_SIZE, 0);
 
     if(strstr(message, "Payment received") != NULL) {
         printf("Payment confirmed! %d Leaving...\n", customerId);
+    } else if(strstr(message, "You can leave!") != NULL) {
+        printf("Permission granted from supervisor! %d Leaving...\n", customerId);
     }
+
 
 
     // Close the socket
     close(sock);
 }
 
-int main() {
+int main(void) {
     srand(time(NULL)+getpid()); // Seed the random number generator
     int customerId = rand() % 1000; // Generate a random customer ID
     int shoppingTime = rand() % 5 + 1; // Generate a random shopping time
