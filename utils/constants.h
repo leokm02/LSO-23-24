@@ -1,15 +1,7 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-#define SERVER_ADDRESS "127.0.0.1"
-#define PORT 9090
-#define MAX_CASHIERS 5
-#define ACTIVE_CASHIERS 4
-#define MAX_CLIENTS 10
-#define CLIENTS_BATCH_SIZE 5
 #define BUFFER_SIZE 1024
-#define MAX_LINE_LENGTH 64
-#define MAX_PRODUCTS 10
 #define GREEN_COLOR "\033[0;32m"
 #define YELLOW_COLOR "\033[0;33m"
 #define MAGENTA_COLOR "\033[0;35m"

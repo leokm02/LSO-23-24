@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <stdatomic.h>
 #include "../utils/queue.h"
+#include "../parameters/parameters.h"
 #include "../utils/constants.h"
 #include "../utils/cashier.h"
 #include "../client/client.h"

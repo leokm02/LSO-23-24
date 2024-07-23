@@ -5,8 +5,9 @@
 #include <arpa/inet.h>
 #include <time.h>
 #include <termios.h>
-#include "../utils/constants.h"
 #include "client.h"
+#include "../utils/constants.h"
+#include "../parameters/parameters.h"
 #include "../utils/queue.h"
 
 
