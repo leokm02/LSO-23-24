@@ -53,7 +53,7 @@ The project includes a Makefile that handles the entire compilation process. To 
 
 The project includes a 'launchApp.sh' script that handles the building and running phase. To do so run:
 ```sh
-    launchApp.sh
+    ./launchApp.sh
 ```
 
 3.    **Stop the app**
