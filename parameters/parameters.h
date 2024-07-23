@@ -1,0 +1,12 @@
+#ifndef PARAMETERS_H
+#define PARAMETERS_H
+
+#define SERVER_ADDRESS "127.0.0.1"
+#define PORT 9090
+#define MAX_CASHIERS 5
+#define ACTIVE_CASHIERS 4
+#define MAX_CLIENTS 10
+#define CLIENTS_BATCH_SIZE 5
+
+
+#endif // PARAMETERS_H

@@ -1,0 +1,10 @@
+services:
+  server:
+    container_name: "MiaoMarket"
+    build: .
+    ports: 
+      - "9090:9090"
+    volumes:
+      - ./logs:/logs
+    stdin_open: true
+    tty: true

@@ -1,0 +1,50 @@
+apples
+bananas
+beans
+beef
+bell peppers
+bread
+broccoli
+butter
+carrots
+cauliflower
+cereal
+cheese
+chicken
+chocolate
+coffee
+cookies
+crackers
+cucumbers
+eggplant
+eggs
+fish
+flour
+grapes
+honey
+jam
+juice
+ketchup
+lettuce
+mayonnaise
+milk
+mushrooms
+mustard
+olive oil
+onions
+oranges
+pasta
+pasta sauce
+peanut butter
+pepper
+potatoes
+rice
+salt
+spinach
+sugar
+tea
+tomato sauce
+vinegar
+water
+wine
+yogurt
